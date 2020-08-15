@@ -1,3 +1,4 @@
+//  Configuracion db
 module.exports = {
     "development": {
         "username": "root",

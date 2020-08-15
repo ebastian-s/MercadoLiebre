@@ -1,84 +1,104 @@
-const fs = require('fs');
-const path = require('path');
-
-const productsFilePath = path.join(__dirname, '../data/productsDataBase.json');
-const products = JSON.parse(fs.readFileSync(productsFilePath, 'utf-8'));
-const saveProducts = (array => fs.writeFileSync(productsFilePath, JSON.stringify(array)));
-
+const db = require('../database/models');
 const toThousand = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-const formatPrice = (price,discount) => toThousand(Math.round(price*(1-(discount/100))));
+const formatPrice = (price, discount) => toThousand(Math.round(price * (1 - (discount / 100))));
 
+/**
+ * Controller
+ */
 const controller = {
-	// Root - Show all products
-	root: (req, res) => {
-		res.render("products", {products, toThousand, formatPrice})
-	},
+    // Root - Show all products
+    root: (req, res) => {
+        // Do the magic
+        // Do the magic
+        db.Productos.findAll()
+            .then((productosResultado) => {
+                if (productosResultado) {
+                    res.render('products', { toThousand, formatPrice, productosAll: productosResultado });
+                } else {
+                    res.send("error");
+                }
+            });
 
-	// Detail - Detail from one product
-	detail: (req,res) => {
-        const product = products.find(item => item.id == req.params.productId);
-        if(product.category === req.params.productCategory) {
-            res.render("detail",{product, toThousand, formatPrice});
-        } else {
-            res.render("error");
-        }
     },
 
-	// Create - Form to create
-	create: (req, res) => {
-		res.render("product-create-form");
-	},
+    // Detail - Detail from one product
+    detail: (req, res) => {
+        // Do the magic
+        db.Productos.findByPk(req.params.productId)
+            .then((productosResultado) => {
+                if (productosResultado) {
+                    res.render('detail', { toThousand, formatPrice, producto: productosResultado });
+                } else {
+                    res.send("error");
+                }
+            });
+    },
 
-	// Create -  Method to store
-	store: (req, res) => {
-		let lastId = 0;
-		products.forEach(producto => {
-			if(producto.id > lastId) {
-				lastId = producto.id;
-			}
-		});
-		const productToCreate = {
-			id: lastId+1,
-			name: req.body.name,
-			price: parseFloat(req.body.price),
-			discount: parseFloat(req.body.discount),
-			category: req.body.category,
-			description: req.body.description,
-			image: "image"
-		};
-		products.push(productToCreate);
-		saveProducts(products);
-		res.send("Agregado!")
-	},
+    // Create - Form to create
+    create: (req, res) => {
+        // Do the magic
+        res.render('product-create-form');
 
-	// Update - Form to edit
-	edit: (req, res) => {
-		const productToEdit = products.find(item => item.id == req.params.productId);
-		res.render("product-edit-form", {productToEdit});
-	},
-	// Update - Method to update
-	update: (req, res) => {
-		let productEdited = null;
-		products.forEach(product => {
-			if(product.id == req.params.productId) {
-				product.name = req.body.name;
-				product.price = parseFloat(req.body.price);
-				product.discount = parseFloat(req.body.discount);
-				product.category = req.body.category;
-				product.description = req.body.description;
-				productEdited = product;
-			}
-		});
-		saveProducts(products);
-		res.send("Editado!");
-	},
+    },
 
-	// Delete - Delete one product from DB
-	destroy : (req, res) => {
-		const productsNew = products.filter(product => product.id != req.params.productId);
-		saveProducts(productsNew);
-		res.send("Eliminado!");
-	}
+    // Create -  Method to store
+    store: (req, res, next) => {
+        // Do the magic
+        //console.log(req.files[0].filename);
+        db.Productos.create({
+            name: req.body.name,
+            description: req.body.description,
+            image: '/images/products/' + req.files[0].filename,
+            price: req.body.price,
+            discount: req.body.discount,
+            category: req.body.category
+        });
+        res.redirect('/');
+    },
+
+    // Update - Form to edit
+    edit: (req, res) => {
+        // Do the magic
+        db.Productos.findByPk(req.params.productId)
+            .then((productoEditar) => {
+                if (productoEditar) {
+                    res.render('product-edit-form', { productToEdit: productoEditar });
+                } else {
+                    res.send("error");
+                }
+            });
+
+    },
+    // Update - Method to update
+    update: (req, res) => {
+        // Do the magic
+        db.Productos.update({
+            name: req.body.name,
+            description: req.body.description,
+            image: '/images/products/' + req.files[0].filename,
+            price: req.body.price,
+            discount: req.body.discount,
+            category: req.body.category
+        }, {
+            where: {
+                id: req.params.productId,
+            }
+        });
+        res.redirect('/');
+
+
+    },
+
+    // Delete - Delete one product from DB
+    destroy: (req, res) => {
+        // Do the magic
+        db.Productos.destroy({
+            where: {
+                id: req.params.productId
+            }
+        })
+        res.redirect('/')
+    }
 };
 
 module.exports = controller;
